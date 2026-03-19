@@ -69,6 +69,14 @@ describe('Function when starting patient on Insulin', () => {
     const r = i200.startingRate(-10.2);
     assert.equal(r, false);
   });
+  it('When called with a value not in 0.1 increments will return false', () => {
+    const r = i200.startingRate(11.25);
+    assert.equal(r, false);
+  });
+  it('When called with a value in 0.1 increments will return a result', () => {
+    const r = i200.startingRate(11.2);
+    assert.notEqual(r, false);
+  });
 });
 
 describe('Governance function', () => {
@@ -165,6 +173,36 @@ describe('Function when adjusting an ongoing Insulin infusion', () => {
   it('When called with 1 NaN parameters report false', () => {
     let r: any = {};
     r = i200.ongoingRate(NaN, 8, 1);
+    assert.equal(r, false);
+  });
+  it('When called with current not in 0.1 increments will return false', () => {
+    let r: any = {};
+    r = i200.ongoingRate(8.25, 8.0, 1.0);
+    assert.equal(r, false);
+  });
+  it('When called with previous not in 0.1 increments will return false', () => {
+    let r: any = {};
+    r = i200.ongoingRate(8.0, 8.25, 1.0);
+    assert.equal(r, false);
+  });
+  it('When called with rate not in 0.1 increments will return false', () => {
+    let r: any = {};
+    r = i200.ongoingRate(8.0, 8.0, 1.25);
+    assert.equal(r, false);
+  });
+  it('When called with negative current will return false', () => {
+    let r: any = {};
+    r = i200.ongoingRate(-5.0, 8.0, 1.0);
+    assert.equal(r, false);
+  });
+  it('When called with negative previous will return false', () => {
+    let r: any = {};
+    r = i200.ongoingRate(8.0, -5.0, 1.0);
+    assert.equal(r, false);
+  });
+  it('When called with negative rate will return false', () => {
+    let r: any = {};
+    r = i200.ongoingRate(8.0, 8.0, -1.0);
     assert.equal(r, false);
   });
   it('When called with hypoglycaemic current reading (1.3), rate is 0', () => {
@@ -343,11 +381,23 @@ describe('glucoseToHex ancillary function', () => {
     const r = i200.glucoseToHex(null);
     assert.equal(r, 'failed');
   });
+  it('Returns `failed` when passed with NaN', () => {
+    const r = i200.glucoseToHex(NaN);
+    assert.equal(r, 'failed');
+  });
+  it('Does not return `failed` when passed with a glucose of 0', () => {
+    const r = i200.glucoseToHex(0);
+    assert.notEqual(r, 'failed');
+  });
 });
 
 describe('rateToHex ancillary function', () => {
   it('Returns `failed` when passed with null glucose', () => {
     const r = i200.rateToHex(null);
+    assert.equal(r, 'failed');
+  });
+  it('Returns `failed` when passed with NaN', () => {
+    const r = i200.rateToHex(NaN);
     assert.equal(r, 'failed');
   });
   it('Does not return `failed` when passed with a rate of 0', () => {

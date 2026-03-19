@@ -24,6 +24,10 @@ interface ongoingAdvice {
 export default class Calc {
   version: number | null;
 
+  isValidIncrement(value: number): boolean {
+    return Math.abs(Math.round(value * 10) - value * 10) < 0.0001;
+  }
+
   constructor(v?: string) {
     // 0.0.0 is test runner
     if (v === '0.0.0') {
@@ -93,7 +97,7 @@ export default class Calc {
   }
 
   glucoseToHex(i: number | null | undefined): string {
-    if (!i) {
+    if (i === null || i === undefined || Number.isNaN(i)) {
       return 'failed';
     }
     const x = i * 10;
@@ -103,7 +107,7 @@ export default class Calc {
   }
 
   rateToHex(i: number | null | undefined): string {
-    if (i === null || i === undefined) {
+    if (i === null || i === undefined || Number.isNaN(i)) {
       return 'failed';
     }
     const x = i * 10;
@@ -526,6 +530,9 @@ export default class Calc {
     if (bg < 0) {
       return false;
     }
+    if (!this.isValidIncrement(bg)) {
+      return false;
+    }
     let result: false | string = false;
     let rate = '';
     let rateNum = 0;
@@ -582,16 +589,37 @@ export default class Calc {
     ) {
       return false;
     }
-    let current: number = parseFloat(passedCurrent) * 10;
-    let previous: number = parseFloat(passedPrevious) * 10;
-    let rate: number = parseFloat(passedRate) * 10;
+    const parsedCurrent = parseFloat(passedCurrent);
+    const parsedPrevious = parseFloat(passedPrevious);
+    const parsedRate = parseFloat(passedRate);
+    if (!this.isValidIncrement(parsedCurrent) || !this.isValidIncrement(parsedPrevious) || !this.isValidIncrement(parsedRate)) {
+      return false;
+    }
+    if (parsedCurrent < 0 || parsedPrevious < 0 || parsedRate < 0) {
+      return false;
+    }
+    let current: number = parsedCurrent * 10;
+    let previous: number = parsedPrevious * 10;
+    let rate: number = parsedRate * 10;
+    // Decision table: sequential if-blocks (NOT if-else). Where conditions overlap,
+    // the LAST matching block wins. This is intentional — later blocks represent
+    // higher-priority clinical scenarios that override earlier matches.
+    // DO NOT reorder these blocks without reviewing all overlapping conditions.
+    //
+    // All values are 10x scaled (e.g. 61 = 6.1 mmol/L) to avoid floating-point
+    // comparison issues. Inputs are validated to 0.1 increments, ensuring scaled
+    // values are integers and the decision ranges are exhaustive.
+
+    // current <= 2.2: severe hypoglycaemia
     let A11 = 'LOGIC ERROR';
     if (current <= 22) {
       A11 = '1';
     }
+    // current 2.3-4.0: hypoglycaemia
     if (current >= 23 && current <= 40) {
       A11 = '2';
     }
+    // current 4.1-6.0: low range
     if (current >= 41 && current < 61 && previous <= 60) {
       A11 = '3';
     }
@@ -601,18 +629,21 @@ export default class Calc {
     if (current >= 41 && current < 61 && previous > 60 && current - previous >= -15 && current - previous < 0) {
       A11 = '3';
     }
+    // current 6.1-7.9: below target range
     if (current >= 61 && current < 80 && rate <= 15) {
       A11 = '29';
     }
     if (current >= 61 && current < 80 && rate > 15) {
       A11 = '53';
     }
+    // current 8.0-10.0: target range
     if (current >= 80 && current < 101 && (previous < 80 || previous > 100)) {
       A11 = '10';
     }
     if (current >= 80 && current < 101 && previous >= 80 && previous <= 100) {
       A11 = '54';
     }
+    // current 10.1-12.0: above target
     if (current >= 101 && current < 121 && previous <= 120 && current - previous < 0) {
       A11 = '17';
     }
@@ -625,6 +656,10 @@ export default class Calc {
     if (current >= 101 && current < 121 && previous > 120 && current - previous < -20) {
       A11 = '33';
     }
+    // current 12.1-14.0: elevated — overlapping conditions below are intentional.
+    // Overlap 1: '35' (L650-658) and '37' (L660-668) both match when
+    //   previous in [132,144] and diff in [-10,-5]. '37' (maintain rate) wins,
+    //   prioritising caution when BG is dropping from a moderately high level.
     if (current >= 121 && current <= 140 && previous < 121) {
       A11 = '34';
     }
@@ -641,6 +676,7 @@ export default class Calc {
     ) {
       A11 = '35';
     }
+    // Overlaps with '35' above — '37' takes priority (last-match-wins)
     if (
       current >= 121 &&
       current <= 140 &&
@@ -657,6 +693,7 @@ export default class Calc {
     if (current >= 121 && current <= 140 && previous > 180) {
       A11 = '33';
     }
+    // current > 14.0: high
     if (current > 140 && previous < 121) {
       A11 = '38';
     }
