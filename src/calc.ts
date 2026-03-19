@@ -592,7 +592,11 @@ export default class Calc {
     const parsedCurrent = parseFloat(passedCurrent);
     const parsedPrevious = parseFloat(passedPrevious);
     const parsedRate = parseFloat(passedRate);
-    if (!this.isValidIncrement(parsedCurrent) || !this.isValidIncrement(parsedPrevious) || !this.isValidIncrement(parsedRate)) {
+    if (
+      !this.isValidIncrement(parsedCurrent) ||
+      !this.isValidIncrement(parsedPrevious) ||
+      !this.isValidIncrement(parsedRate)
+    ) {
       return false;
     }
     if (parsedCurrent < 0 || parsedPrevious < 0 || parsedRate < 0) {

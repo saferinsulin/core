@@ -11,6 +11,7 @@
     "test": "c8 mocha",
     "report-coverage": "c8 --reporter=text-lcov npm run test > coverage.lcov",
     "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
     "oxlint": "oxlint ." ,
     "build:cjs": "rollup ./out-tsc/src/calc.js --file ./dist/calc.cjs --format cjs",
     "build:esm": "rollup ./out-tsc/src/calc.js --file ./dist/calc.js --format esm",
